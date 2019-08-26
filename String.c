@@ -1363,6 +1363,11 @@ int DateConv(char *buf, char *ret)
 	}
 
 	if(i == -1){
+		//RFC 822 no day
+		i = FormatDateConv("d m y h:n:s t", buf, &gTime);
+	}
+
+	if(i == -1){
 		//ANSI C's asctime() format
 		i = FormatDateConv("w m d h:n:s y", buf, &gTime);
 		if(i == 0){
@@ -1697,15 +1702,15 @@ int GetKanjiType(unsigned char *str)
 
 	KanjiTypeUTF8
 
-	漢字コードがUTF-8っぽいか
+	漢字コードがUTF-8か
 
 ******************************************************************************/
 
-static BOOL KanjiTypeUTF8(const unsigned char *str)
+static BOOL KanjiTypeUTF8(const char *str)
 {
-	int length;
-	BOOL ascii;
-
+	unsigned char c;
+	int count = 0;
+	BOOL bit8 = FALSE;
 	/*
 	char *xmldec, *p, *q;
 
@@ -1721,31 +1726,25 @@ static BOOL KanjiTypeUTF8(const unsigned char *str)
 	}
 	*/
 
-	//漢字コードがUTF-8っぽいかによる判定
-	if (str[0] == 0xef && str[1] == 0xbb && str[2] == 0xbf)
-		return TRUE;
-
-	ascii = TRUE;
-	length = 0;
-	while (*str != '\0') {
-		if (length > 0) {
-			if ((*str & 0xc0) != 0x80)
-				return FALSE;
+	while ((c = *str) != '\0') {
+		if (count == 0) {
+			if ((c & 0x80) != 0) {
+				if ((c & 0xe0) == 0xc0) count = 1;
+				else if ((c & 0xf0) == 0xe0) count = 2;
+				else if ((c & 0xf8) == 0xf0) count = 3;
+				// else if ((c & 0xfc) == 0xf8) count = 4;
+				// else if ((c & 0xfe) == 0xfc) count = 5;
+				else return FALSE;
+				bit8 = TRUE;
+			}
 		} else {
-			if ((*str & 0x80) == 0x00) length = 1;
-			else if ((*str & 0xe0) == 0xc0) length = 2;
-			else if ((*str & 0xf0) == 0xe0) length = 3;
-			else if ((*str & 0xf8) == 0xf0) length = 4;
-			else if ((*str & 0xfc) == 0xf8) length = 5;
-			else if ((*str & 0xfe) == 0xfc) length = 6;
-			else return FALSE;
-			if (length > 1)
-				ascii = FALSE;
+			if ((c & 0xc0) != 0x80)
+				return FALSE;
+			count--;
 		}
 		str++;
-		length--;
 	}
-	return !ascii;
+	return bit8;
 }
 
 
@@ -1772,11 +1771,11 @@ static char *UTF8_SJIS(const char *buf, char *ret)
 		return NULL;
 	if (MultiByteToWideChar(CP_UTF8, 0, buf, -1, wp, len) == 0) {
 		GlobalFree(wp);
-		return 0;
+		return NULL;
 	}
-	len = WideCharToMultiByte(932, 0, wp, -1, ret, GlobalSize(ret), NULL, NULL);
+	len = WideCharToMultiByte(CP_ACP, 0, wp, -1, ret, GlobalSize(ret), NULL, NULL);
 	GlobalFree(wp);
-	return (len != 0 ? ret + len - 1 : NULL);
+	return (len != 0) ? ret + len - 1 : NULL;
 }
 
 

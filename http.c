@@ -417,10 +417,12 @@ static char *GetRssItem(char *buf)
 
 	// RSS判定
 	if( strstr(buf, "<?xml") == NULL ) return NULL;
-	if( strstr(buf, "<item>") != NULL ){
+	if( strstr(buf, "<item>") != NULL ){		// RSS 2.0
 		p = strstr(buf, "<item>");
-	} else if( strstr(buf, "<item ") != NULL){
+	} else if( strstr(buf, "<item ") != NULL){	// RSS 1.0
 		p = strstr(buf, "<item ");
+	} else if( strstr(buf, "<entry>") != NULL){	// Atom
+		p = strstr(buf, "<entry>");
 	} else {
 		return NULL;
 	}
@@ -429,7 +431,7 @@ static char *GetRssItem(char *buf)
 	//タイトルの取得
 	len = GetTagContentSize(p, "title");
 	if(len == 0) return NULL;
-	content = (char *)GlobalAlloc(GMEM_FIXED, len + 18);
+	content = (char *)GlobalAlloc(GMEM_FIXED, len + 19);
 	if( content == NULL ) return NULL;
 	strncpy(content, "0000/00/00 00:00 ", 17);
 	if( GetTagContent(p, "title", content + 17) == FALSE ){
@@ -438,6 +440,7 @@ static char *GetRssItem(char *buf)
 	}
 
 	//更新日の取得
+	// RSS 1.0 Dublin Core
 	if( (len = GetTagContentSize(p, "dc:date")) != 0 ){
 		tmp = (char *)GlobalAlloc(GMEM_FIXED, len + 1);
 		if( tmp == NULL ){
@@ -446,6 +449,7 @@ static char *GetRssItem(char *buf)
 		}
 		GetTagContent(p, "dc:date", tmp);
 	}
+	// RSS 2.0
 	else if( (len = GetTagContentSize(p, "pubdate")) != 0 ){
 		tmp = (char *)GlobalAlloc(GMEM_FIXED, len + 1);
 		if( tmp == NULL ){
@@ -454,6 +458,24 @@ static char *GetRssItem(char *buf)
 		}
 		if( GetTagContent(p, "pubdate", tmp) && DateConv(tmp, chtime) == 0 ) lstrcpy(tmp, chtime);
 		else tmp[0] = '\0';
+	}
+	// Atom 1.0
+	else if( (len = GetTagContentSize(p, "updated")) != 0 ){
+		tmp = (char *)GlobalAlloc(GMEM_FIXED, len + 1);
+		if( tmp == NULL ){
+			GlobalFree(content);
+			return NULL;
+		}
+		GetTagContent(p, "updated", tmp);
+	}
+	// Atom 0.3
+	else if( (len = GetTagContentSize(p, "modified")) != 0 ){
+		tmp = (char *)GlobalAlloc(GMEM_FIXED, len + 1);
+		if( tmp == NULL ){
+			GlobalFree(content);
+			return NULL;
+		}
+		GetTagContent(p, "modified", tmp);
 	}
 	else {
 		return content;
@@ -579,7 +601,7 @@ static int GetMetaString(struct TPITEM *tpItemInfo)
 	lstrcpy(tmp, tpHTTP->buf);
 	DeleteSizeInfo(tmp, tpHTTP->Size);
 	//SJISに変換
-	p = SrcConv(tmp + HeaderSize(tpHTTP->buf), tpHTTP->Size);
+	p = SrcConv(tmp + HeaderSize(tmp), tpHTTP->Size);
 	GlobalFree(tmp);
 
 	if( (MetaContent = GetRssItem(p)) != NULL
@@ -1334,11 +1356,11 @@ static int HTTPSendRequest(HWND hWnd, struct TPITEM *tpItemInfo)
 
 	//If-Modified-Since
 	if(tpItemInfo->user2 == (REQUEST_GET || REQUEST_POST) && tpItemInfo->Param3 == 0 &&
-		tpItemInfo->DLLData1 != NULL && *tpItemInfo->DLLData1 != '\0' &&
+		tpItemInfo->DLLData1 != NULL && *tpItemInfo->DLLData1 != '\0'){/* &&
 		GetOptionInt(tpItemInfo->Option1, OP1_NODATE) == 0 &&
 		GetOptionInt(tpItemInfo->Option1, OP1_META) == 0 &&
 		GetOptionInt(tpItemInfo->Option1, OP1_MD5) == 0 &&
-		GetOptionInt(tpItemInfo->Option1, OP1_NOTAGSIZE) == 0){
+		GetOptionInt(tpItemInfo->Option1, OP1_NOTAGSIZE) == 0){*/
 		//GETで更新日でチェックする場合は強制的にIMSを発行
 		s = iStrCpy(s, "\r\nIf-Modified-Since: ");
 		s = iStrCpy(s, tpItemInfo->DLLData1);
