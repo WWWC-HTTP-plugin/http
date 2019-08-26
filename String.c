@@ -1695,6 +1695,93 @@ int GetKanjiType(unsigned char *str)
 
 /******************************************************************************
 
+	KanjiTypeUTF8
+
+	漢字コードがUTF-8っぽいか
+
+******************************************************************************/
+
+static BOOL KanjiTypeUTF8(const unsigned char *str)
+{
+	int length;
+	BOOL ascii;
+
+	/*
+	char *xmldec, *p, *q;
+
+	//XML宣言によるUTF-8判定
+	if( (p = strstr(str,"<?xml ")) != NULL && (q = strstr(p,"?>")) != NULL ){
+		xmldec = GlobalAlloc(GMEM_FIXED, lstrlen(p)-lstrlen(q)+3);
+		strncpy(xmldec, p, lstrlen(p)-lstrlen(q)+2);
+		if( StrMatch("* encoding=\"utf-8\"*", xmldec) ){
+			GlobalFree(xmldec);
+			return TRUE;
+		}
+		GlobalFree(xmldec);
+	}
+	*/
+
+	//漢字コードがUTF-8っぽいかによる判定
+	if (str[0] == 0xef && str[1] == 0xbb && str[2] == 0xbf)
+		return TRUE;
+
+	ascii = TRUE;
+	length = 0;
+	while (*str != '\0') {
+		if (length > 0) {
+			if ((*str & 0xc0) != 0x80)
+				return FALSE;
+		} else {
+			if ((*str & 0x80) == 0x00) length = 1;
+			else if ((*str & 0xe0) == 0xc0) length = 2;
+			else if ((*str & 0xf0) == 0xe0) length = 3;
+			else if ((*str & 0xf8) == 0xf0) length = 4;
+			else if ((*str & 0xfc) == 0xf8) length = 5;
+			else if ((*str & 0xfe) == 0xfc) length = 6;
+			else return FALSE;
+			if (length > 1)
+				ascii = FALSE;
+		}
+		str++;
+		length--;
+	}
+	return !ascii;
+}
+
+
+/******************************************************************************
+
+	UTF8_SJIS
+
+	UTF-8をSJISに変換する
+
+******************************************************************************/
+
+static char *UTF8_SJIS(const char *buf, char *ret)
+{
+	int len;
+	wchar_t *wp;
+
+	*ret = '\0';
+	if (buf[0] == (char)0xef && buf[1] == (char)0xbb && buf[2] == (char)0xbf)
+		buf += 3;
+
+	if ((len = MultiByteToWideChar(CP_UTF8, 0, buf, -1, NULL, 0)) == 0)
+		return NULL;
+	if ((wp = GlobalAlloc(GMEM_FIXED, len * sizeof(wchar_t))) == NULL)
+		return NULL;
+	if (MultiByteToWideChar(CP_UTF8, 0, buf, -1, wp, len) == 0) {
+		GlobalFree(wp);
+		return 0;
+	}
+	len = WideCharToMultiByte(932, 0, wp, -1, ret, GlobalSize(ret), NULL, NULL);
+	GlobalFree(wp);
+	return (len != 0 ? ret + len - 1 : NULL);
+}
+
+
+/******************************************************************************
+
 	ConvStrCode
 
 	JISかEUCの漢字コードをSJISに変換する
@@ -1706,6 +1793,9 @@ char *ConvStrCode(char *buf, char *ret)
 	char *p;
 	int rc;
 	BOOL eucflag = FALSE;
+
+	if (KanjiTypeUTF8(buf))
+		return UTF8_SJIS(buf, ret);
 
 	p = buf;
 	while(*p != '\0'){

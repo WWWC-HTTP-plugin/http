@@ -29,7 +29,8 @@
 #define ID_MENUITEM_COPY				40056
 #define ID_MENUITEM_ALLSELECT			40057
 
-#define BUFSIZE							256
+//#define BUFSIZE							256
+#define BUFSIZE							2048
 #define MAXSIZE							32768
 #define RECVSIZE						32768				/* 受信サイズ */
 
@@ -42,6 +43,7 @@
 #define OP1_NAME						6
 #define OP1_CONTENT						7
 #define OP1_MD5							8
+#define OP1_POST						9
 
 #define OP2_NOPROXY						0
 #define OP2_SETPROXY					1
@@ -50,6 +52,9 @@
 #define OP2_USEPASS						4
 #define OP2_USER						5
 #define OP2_PASS						6
+#define OP2_USERAGENT					7
+#define OP2_REFERRER					8
+#define OP2_COOKIE						9
 
 #define LVM_FIRST						0x1000      // ListView messages
 #define LVM_SETEXTENDEDLISTVIEWSTYLE	(LVM_FIRST + 54)

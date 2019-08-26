@@ -1,5 +1,5 @@
 //{{NO_DEPENDENCIES}}
-// Microsoft Developer Studio generated include file.
+// Microsoft Visual C++ generated include file.
 // Used by http.rc
 //
 #define IDI_ICON_HTTP                   1
@@ -64,14 +64,20 @@
 #define IDC_EDIT_SIZE                   1045
 #define IDC_EDIT_ERRORINFO              1046
 #define IDC_EDIT_CHECKDATE              1047
+#define IDC_EDIT_USERAGENT              1048
+#define IDC_EDIT_REFERRER               1051
+#define IDC_EDIT_COOKIE                 1052
+#define IDC_RADIO_REQTYPE_POST          1053
+#define IDC_EDIT1                       1054
+#define IDC_EDIT_POST                   1054
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        115
+#define _APS_NEXT_RESOURCE_VALUE        116
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1048
+#define _APS_NEXT_CONTROL_VALUE         1055
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -47,6 +47,7 @@
 
 #define REQUEST_HEAD		0
 #define REQUEST_GET			1
+#define REQUEST_POST		3
 
 #define HTTP_MENU_CNT		6
 
@@ -107,6 +108,8 @@ static int Head_GetSize(struct TPITEM *tpItemInfo, int CmpOption, int SetDate, B
 static int Get_GetSize(struct TPITEM *tpItemInfo, int CmpOption, int SetDate);
 static int Get_MD5Check(struct TPITEM *tpItemInfo, int SetDate);
 static int HeaderFunc(HWND hWnd, struct TPITEM *tpItemInfo);
+
+static char *GetRssItem(char *buf);
 
 //MainWindow
 static void SetSBText(HWND hWnd, struct TPITEM *tpItemInfo, char *msg);
@@ -392,10 +395,80 @@ static char *GetTitle(char *buf)
 	}
 	//特殊文字の変換
 	ConvHTMLChar(ret);
+
 	return ret;
 }
 
+/******************************************************************************
 
+	GetRssItem
+
+	RSS-Itemを取得
+
+******************************************************************************/
+
+static char *GetRssItem(char *buf)
+{
+	char *content;
+	char *p, *tmp;
+	char chtime[BUFSIZE];
+	int len;
+	int i;
+
+	// RSS判定
+	if( strstr(buf, "<?xml") == NULL ) return NULL;
+	if( strstr(buf, "<item>") != NULL ){
+		p = strstr(buf, "<item>");
+	} else if( strstr(buf, "<item ") != NULL){
+		p = strstr(buf, "<item ");
+	} else {
+		return NULL;
+	}
+	if( strstr(p, "<title") == NULL ) return NULL;
+
+	//タイトルの取得
+	len = GetTagContentSize(p, "title");
+	if(len == 0) return NULL;
+	content = (char *)GlobalAlloc(GMEM_FIXED, len + 18);
+	if( content == NULL ) return NULL;
+	strncpy(content, "0000/00/00 00:00 ", 17);
+	if( GetTagContent(p, "title", content + 17) == FALSE ){
+		GlobalFree(content);
+		return NULL;
+	}
+
+	//更新日の取得
+	if( (len = GetTagContentSize(p, "dc:date")) != 0 ){
+		tmp = (char *)GlobalAlloc(GMEM_FIXED, len + 1);
+		if( tmp == NULL ){
+			GlobalFree(content);
+			return NULL;
+		}
+		GetTagContent(p, "dc:date", tmp);
+	}
+	else if( (len = GetTagContentSize(p, "pubdate")) != 0 ){
+		tmp = (char *)GlobalAlloc(GMEM_FIXED, len + 1);
+		if( tmp == NULL ){
+			GlobalFree(content);
+			return NULL;
+		}
+		if( GetTagContent(p, "pubdate", tmp) && DateConv(tmp, chtime) == 0 ) lstrcpy(tmp, chtime);
+		else tmp[0] = '\0';
+	}
+	else {
+		return content;
+	}
+
+	if( lstrlen(tmp) > 16 ) tmp[16] = '\0';
+	for(i = 0; tmp[i] != '\0'; i++){
+		if( tmp[i] >= '0' && tmp[i] <= '9' ) content[i] = tmp[i];
+	}
+	GlobalFree(tmp);
+
+	//MessageBox(NULL, content, "content", 0);
+
+	return content;
+}
 
 /******************************************************************************
 
@@ -482,6 +555,7 @@ static int GetMetaString(struct TPITEM *tpItemInfo)
 	char content[BUFSIZE];
 	char *MetaContent;
 	char *p;
+	char *tmp;
 	int CmpMsg = ST_DEFAULT;
 
 	tpHTTP = (struct TPHTTP *)tpItemInfo->Param1;
@@ -499,10 +573,18 @@ static int GetMetaString(struct TPITEM *tpItemInfo)
 		lstrcpy(content, DEF_META_CONTENT);
 	}
 
+	tmp = GlobalAlloc(GMEM_FIXED, lstrlen(tpHTTP->buf)+1);
+	if(tmp == NULL)
+		return CmpMsg;
+	lstrcpy(tmp, tpHTTP->buf);
+	DeleteSizeInfo(tmp, tpHTTP->Size);
 	//SJISに変換
-	p = SrcConv(tpHTTP->buf + HeaderSize(tpHTTP->buf), tpHTTP->Size);
+	p = SrcConv(tmp + HeaderSize(tpHTTP->buf), tpHTTP->Size);
+	GlobalFree(tmp);
 
-	if((MetaContent = GetMETATag(p, type, name, content)) != NULL){
+	if( (MetaContent = GetRssItem(p)) != NULL
+	|| (MetaContent = GetMETATag(p, type, name, content)) != NULL ){
+
 		//特殊文字の変換
 		ConvHTMLChar(MetaContent);
 
@@ -889,7 +971,7 @@ static int HeaderFunc(HWND hWnd, struct TPITEM *tpItemInfo)
 			break;
 		}
 		//タイトル取得
-		if(Status == 200){
+		if(Status == 200 || 100){
 			if((titlebuf = GetTitle(tpHTTP->buf + HeaderSize(tpHTTP->buf))) != NULL){
 				if(tpItemInfo->Title != NULL){
 					GlobalFree(tpItemInfo->Title);
@@ -916,6 +998,7 @@ static int HeaderFunc(HWND hWnd, struct TPITEM *tpItemInfo)
 
 	switch(Status)
 	{
+	case 100:
 	case 200:	/* 成功の場合 */
 		if(tpItemInfo->user2 == REQUEST_HEAD){
 			//HEAD
@@ -940,7 +1023,7 @@ static int HeaderFunc(HWND hWnd, struct TPITEM *tpItemInfo)
 			break;
 		}
 
-		//GET
+		//GET or POST
 		if(GetOptionInt(tpItemInfo->Option1, OP1_META) == 1){
 			//METAタグを取得
 			CmpMsg |= GetMetaString(tpItemInfo);
@@ -1191,6 +1274,11 @@ static int HTTPSendRequest(HWND hWnd, struct TPITEM *tpItemInfo)
 	char BaseStr2[BUFSIZE];
 	char user[BUFSIZE];
 	char pass[BUFSIZE];
+	char useragent[BUFSIZE];
+	char referrer[BUFSIZE];
+	char cookie[BUFSIZE];
+	char poststring[BUFSIZE];
+	char postlen[BUFSIZE];
 	char buf[BUFSIZE];
 	char *p;
 	char *SendBuf;
@@ -1201,13 +1289,14 @@ static int HTTPSendRequest(HWND hWnd, struct TPITEM *tpItemInfo)
 		return CHECK_ERROR;
 	}
 
-	s = SendBuf = (char *)GlobalAlloc(GPTR, (lstrlen(tpHTTP->Path) * 3) + lstrlen(tpHTTP->hSvName) + 1024);
+	s = SendBuf = (char *)GlobalAlloc(GPTR, (lstrlen(tpHTTP->Path) * 3) + lstrlen(tpHTTP->hSvName) + 4096);
 	if(SendBuf == NULL){
 		return CHECK_ERROR;
 	}
 
 	//リクエストメソッド (HTTP/1.1 : RFC 2616)
-	s = (tpItemInfo->user2 == REQUEST_HEAD) ? iStrCpy(s, "HEAD ") : iStrCpy(s, "GET ");
+	// s = (tpItemInfo->user2 == REQUEST_HEAD) ? iStrCpy(s, "HEAD ") : iStrCpy(s, "GET ");
+	s = (tpItemInfo->user2 == REQUEST_HEAD) ? iStrCpy(s, "HEAD ") : (tpItemInfo->user2 == REQUEST_POST) ? iStrCpy(s, "POST ") : iStrCpy(s, "GET ");
 
 	//URIに使えない文字の変換 (RFC 2396)
 	for(p = tpHTTP->Path; *p != '\0'; p++){
@@ -1236,10 +1325,15 @@ static int HTTPSendRequest(HWND hWnd, struct TPITEM *tpItemInfo)
 
 	//Accept , User-Agent
 	s = iStrCpy(s, "\r\nAccept: */*\r\nUser-Agent: ");
-	s = iStrCpy(s, USER_AGENT);
+	//s = iStrCpy(s, USER_AGENT);
+
+	if (GetOptionString(tpItemInfo->Option2, useragent, OP2_USERAGENT) == TRUE)
+		s = iStrCpy(s, useragent);
+	else
+		s = iStrCpy(s, USER_AGENT);
 
 	//If-Modified-Since
-	if(tpItemInfo->user2 == REQUEST_GET && tpItemInfo->Param3 == 0 &&
+	if(tpItemInfo->user2 == (REQUEST_GET || REQUEST_POST) && tpItemInfo->Param3 == 0 &&
 		tpItemInfo->DLLData1 != NULL && *tpItemInfo->DLLData1 != '\0' &&
 		GetOptionInt(tpItemInfo->Option1, OP1_NODATE) == 0 &&
 		GetOptionInt(tpItemInfo->Option1, OP1_META) == 0 &&
@@ -1295,7 +1389,38 @@ static int HTTPSendRequest(HWND hWnd, struct TPITEM *tpItemInfo)
 		s = iStrCpy(s, "\r\nAuthorization: Basic ");
 		s = iStrCpy(s, BaseStr2);
 	}
+
+	// リファラ
+	if(GetOptionString(tpItemInfo->Option2, referrer, OP2_REFERRER) == TRUE) {
+		s = iStrCpy(s, "\r\nReferer: ");
+		s = iStrCpy(s, referrer);
+	}
+
+	// クッキー
+	if(GetOptionString(tpItemInfo->Option2, cookie, OP2_COOKIE) == TRUE) {
+		s = iStrCpy(s, "\r\nCookie: ");
+		s = iStrCpy(s, cookie);
+	}
+
+	// POSTデータについて(40氏のソースより)
+	if(GetOptionInt(tpItemInfo->Option1, OP1_REQTYPE) == REQUEST_POST) {
+		if(GetOptionString(tpItemInfo->Option1, poststring, OP1_POST) == FALSE) {
+			*poststring = '\0';
+		}
+		s = iStrCpy(s, "\r\nContent-Type: ");
+		s = iStrCpy(s, "application/x-www-form-urlencoded");
+		s = iStrCpy(s, "\r\nContent-Length: ");
+		itoa(lstrlen(poststring), postlen, 10);
+		s = iStrCpy(s, postlen);
+	}
+
+	// ヘッダ終端
 	s = iStrCpy(s, "\r\n\r\n");
+
+	//POSTデータ
+	if(GetOptionInt(tpItemInfo->Option1, OP1_REQTYPE) == REQUEST_POST){
+		s = iStrCpy(s, poststring);
+	}
 
 	//リクエストヘッダの送信
 	if(send(tpItemInfo->Soc1, SendBuf, lstrlen(SendBuf), 0) == SOCKET_ERROR){
@@ -2112,7 +2237,7 @@ __declspec(dllexport) int CALLBACK HTTP_Start(HWND hWnd, struct TPITEM *tpItemIn
 			GetOptionInt(tpItemInfo->Option1, OP1_NOTAGSIZE) == 1){
 			tpItemInfo->user2 = REQUEST_GET;
 		}
-		if(tpItemInfo->user2 == REQUEST_GET){
+		if(tpItemInfo->user2 == REQUEST_GET || REQUEST_POST){
 			//フィルタ
 			tpHTTP->FilterFlag = FilterMatch(tpItemInfo->CheckURL);
 		}
@@ -2120,7 +2245,7 @@ __declspec(dllexport) int CALLBACK HTTP_Start(HWND hWnd, struct TPITEM *tpItemIn
 
 	case 2:		//ソース表示
 	case 3:		//タイトル取得
-		tpItemInfo->user2 = REQUEST_GET;
+		tpItemInfo->user2 = (GetOptionInt(tpItemInfo->Option1, OP1_REQTYPE) == REQUEST_POST) ? REQUEST_POST : REQUEST_GET;
 		tpHTTP->FilterFlag = (GetAsyncKeyState(VK_SHIFT) < 0) ? TRUE : FALSE;
 		break;
 	}

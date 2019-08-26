@@ -83,6 +83,7 @@ static BOOL CALLBACK PropertyProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 static void ReqTypeEnable(HWND hDlg);
 static BOOL CALLBACK PropertyCheckProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 static BOOL CALLBACK PropertyOptionProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+static BOOL CALLBACK PropertyAdditionalProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 static BOOL CALLBACK ProtocolPropertyCheckProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 
@@ -423,9 +424,18 @@ static void ReqTypeEnable(HWND hDlg)
 		IsDlgButtonChecked(hDlg, IDC_CHECK_META) != 0){
 		EnableWindow(GetDlgItem(hDlg, IDC_RADIO_REQTYPE_AUTO), FALSE);
 		EnableWindow(GetDlgItem(hDlg, IDC_RADIO_REQTYPE_GET), FALSE);
+		EnableWindow(GetDlgItem(hDlg, IDC_RADIO_REQTYPE_POST), FALSE);
+		EnableWindow(GetDlgItem(hDlg, IDC_EDIT_POST), FALSE);
 	}else{
 		EnableWindow(GetDlgItem(hDlg, IDC_RADIO_REQTYPE_AUTO), TRUE);
 		EnableWindow(GetDlgItem(hDlg, IDC_RADIO_REQTYPE_GET), TRUE);
+		EnableWindow(GetDlgItem(hDlg, IDC_RADIO_REQTYPE_POST), TRUE);
+		EnableWindow(GetDlgItem(hDlg, IDC_EDIT_POST), TRUE);
+		if(IsDlgButtonChecked(hDlg, IDC_RADIO_REQTYPE_POST) == 0){
+			EnableWindow(GetDlgItem(hDlg, IDC_EDIT_POST), FALSE);
+		}else{
+			EnableWindow(GetDlgItem(hDlg, IDC_EDIT_POST), TRUE);
+		}
 	}
 }
 
@@ -445,6 +455,7 @@ static BOOL CALLBACK PropertyCheckProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPAR
 	char type[BUFSIZE];
 	char name[BUFSIZE];
 	char content[BUFSIZE];
+	char poststring[BUFSIZE];
 	int ReqType;
 	BOOL EnableFlag;
 
@@ -453,6 +464,7 @@ static BOOL CALLBACK PropertyCheckProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPAR
 	case WM_INITDIALOG:
 		tpItemInfo = GetItemInfo(GetParent(hDlg));
 
+		SendMessage(GetDlgItem(hDlg, IDC_EDIT_POST), EM_LIMITTEXT, BUFSIZE - 2, 0);
 		SendMessage(GetDlgItem(hDlg, IDC_EDIT_META_TYPE), EM_LIMITTEXT, BUFSIZE - 2, 0);
 		SendMessage(GetDlgItem(hDlg, IDC_EDIT_META_TYPENAME), EM_LIMITTEXT, BUFSIZE - 2, 0);
 		SendMessage(GetDlgItem(hDlg, IDC_EDIT_META_CONTENT), EM_LIMITTEXT, BUFSIZE - 2, 0);
@@ -468,6 +480,14 @@ static BOOL CALLBACK PropertyCheckProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPAR
 		case 2:
 			CheckDlgButton(hDlg, IDC_RADIO_REQTYPE_GET, 1);
 			break;
+
+		case 3:
+			CheckDlgButton(hDlg, IDC_RADIO_REQTYPE_POST, 1);
+			break;
+		}
+
+		if(GetOptionString(tpItemInfo->Option1, buf, OP1_POST) == TRUE){
+			SendMessage(GetDlgItem(hDlg, IDC_EDIT_POST), WM_SETTEXT, 0, (LPARAM)buf);
 		}
 
 		CheckDlgButton(hDlg, IDC_CHECK_DATE, !GetOptionInt(tpItemInfo->Option1, OP1_NODATE));
@@ -506,6 +526,16 @@ static BOOL CALLBACK PropertyCheckProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPAR
 	case WM_COMMAND:
 		switch(wParam)
 		{
+		case IDC_RADIO_REQTYPE_AUTO:
+		case IDC_RADIO_REQTYPE_GET:
+		case IDC_RADIO_REQTYPE_POST:
+			if(IsDlgButtonChecked(hDlg, IDC_RADIO_REQTYPE_POST) == 0){
+				EnableWindow(GetDlgItem(hDlg, IDC_EDIT_POST), FALSE);
+			}else{
+				EnableWindow(GetDlgItem(hDlg, IDC_EDIT_POST), TRUE);
+			}
+			break;
+
 		case IDC_CHECK_SIZE:
 			if(IsDlgButtonChecked(hDlg, IDC_CHECK_SIZE) == 0){
 				EnableWindow(GetDlgItem(hDlg, IDC_CHECK_NOTAGSIZE), FALSE);
@@ -542,8 +572,11 @@ static BOOL CALLBACK PropertyCheckProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPAR
 
 			ReqType = GetOptionInt(tpItemInfo->Option1, OP1_REQTYPE);
 			ReqType = (IsDlgButtonChecked(hDlg, IDC_RADIO_REQTYPE_GET) == 1)
-				? 2 : ((ReqType == 2) ? 0 : ReqType);
+				? 2 : ((IsDlgButtonChecked(hDlg, IDC_RADIO_REQTYPE_POST) == 1)
+				? 3 : (ReqType == 2 || ReqType == 3)
+				? 0 : ReqType);
 
+			SendMessage(GetDlgItem(hDlg, IDC_EDIT_POST), WM_GETTEXT, BUFSIZE - 1, (LPARAM)poststring);
 			SendMessage(GetDlgItem(hDlg, IDC_EDIT_META_TYPE), WM_GETTEXT, BUFSIZE - 1, (LPARAM)type);
 			SendMessage(GetDlgItem(hDlg, IDC_EDIT_META_TYPENAME), WM_GETTEXT, BUFSIZE - 1, (LPARAM)name);
 			SendMessage(GetDlgItem(hDlg, IDC_EDIT_META_CONTENT), WM_GETTEXT, BUFSIZE - 1, (LPARAM)content);
@@ -552,16 +585,17 @@ static BOOL CALLBACK PropertyCheckProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPAR
 				GlobalFree(tpItemInfo->Option1);
 			}
 			tpItemInfo->Option1 = (char *)GlobalAlloc(GPTR,
-				30 + lstrlen(type) + lstrlen(name) + lstrlen(content));
+				32 + lstrlen(type) + lstrlen(name) + lstrlen(content) + lstrlen(poststring));
 			if(tpItemInfo->Option1 != NULL){
-				wsprintf(tpItemInfo->Option1, "%d;;%d;;%d;;%d;;%d;;%s;;%s;;%s;;%d",
+				wsprintf(tpItemInfo->Option1, "%d;;%d;;%d;;%d;;%d;;%s;;%s;;%s;;%d;;%s",
 					ReqType,
 					!IsDlgButtonChecked(hDlg, IDC_CHECK_DATE),
 					!IsDlgButtonChecked(hDlg, IDC_CHECK_SIZE),
 					IsDlgButtonChecked(hDlg, IDC_CHECK_NOTAGSIZE),
 					IsDlgButtonChecked(hDlg, IDC_CHECK_META),
 					type, name, content,
-					IsDlgButtonChecked(hDlg, IDC_CHECK_MD5));
+					IsDlgButtonChecked(hDlg, IDC_CHECK_MD5),
+					poststring);
 			}
 			break;
 		}
@@ -590,6 +624,9 @@ static BOOL CALLBACK PropertyOptionProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPA
 	char port[BUFSIZE];
 	char user[BUFSIZE];
 	char pass[BUFSIZE];
+	char useragent[BUFSIZE];
+	char referrer[BUFSIZE];
+	char cookie[BUFSIZE];
 	BOOL EnableFlag;
 
 	switch (uMsg)
@@ -621,6 +658,21 @@ static BOOL CALLBACK PropertyOptionProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPA
 		if(GetOptionString(tpItemInfo->Option2, buf, OP2_PASS) == TRUE){
 			dPass(buf, pass);
 			SendMessage(GetDlgItem(hDlg, IDC_EDIT_PASS), WM_SETTEXT, 0, (LPARAM)pass);
+		}
+
+		// User-Agent
+		if(GetOptionString(tpItemInfo->Option2, buf, OP2_USERAGENT) == TRUE){
+			SendMessage(GetDlgItem(hDlg, IDC_EDIT_USERAGENT), WM_SETTEXT, 0, (LPARAM)buf);
+		}
+
+		// Referrer
+		if(GetOptionString(tpItemInfo->Option2, buf, OP2_REFERRER) == TRUE){
+			SendMessage(GetDlgItem(hDlg, IDC_EDIT_REFERRER), WM_SETTEXT, 0, (LPARAM)buf);
+		}
+
+		// Cookie
+		if(GetOptionString(tpItemInfo->Option2, buf, OP2_COOKIE) == TRUE){
+			SendMessage(GetDlgItem(hDlg, IDC_EDIT_COOKIE), WM_SETTEXT, 0, (LPARAM)buf);
 		}
 
 		if(IsDlgButtonChecked(hDlg, IDC_CHECK_NOPROXY) != 0){
@@ -680,19 +732,23 @@ static BOOL CALLBACK PropertyOptionProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPA
 			SendMessage(GetDlgItem(hDlg, IDC_EDIT_USER), WM_GETTEXT, BUFSIZE - 1, (LPARAM)user);
 			SendMessage(GetDlgItem(hDlg, IDC_EDIT_PASS), WM_GETTEXT, BUFSIZE - 1, (LPARAM)buf);
 			ePass(buf, pass);
+			SendMessage(GetDlgItem(hDlg, IDC_EDIT_USERAGENT), WM_GETTEXT, BUFSIZE - 1, (LPARAM)useragent);
+			SendMessage(GetDlgItem(hDlg, IDC_EDIT_REFERRER), WM_GETTEXT, BUFSIZE - 1, (LPARAM)referrer);
+			SendMessage(GetDlgItem(hDlg, IDC_EDIT_COOKIE), WM_GETTEXT, BUFSIZE - 1, (LPARAM)cookie);
+			
 
 			if(tpItemInfo->Option2 != NULL){
 				GlobalFree(tpItemInfo->Option2);
 			}
 			tpItemInfo->Option2 = (char *)GlobalAlloc(GPTR,
-				16 + lstrlen(proxy) + lstrlen(port) + lstrlen(user) + lstrlen(pass));
+				24 + lstrlen(proxy) + lstrlen(port) + lstrlen(user) + lstrlen(pass) + lstrlen(useragent) + lstrlen(referrer) + lstrlen(cookie));
 			if(tpItemInfo->Option2 != NULL){
-				wsprintf(tpItemInfo->Option2, "%d;;%d;;%s;;%s;;%d;;%s;;%s",
+				wsprintf(tpItemInfo->Option2, "%d;;%d;;%s;;%s;;%d;;%s;;%s;;%s;;%s;;%s",
 					IsDlgButtonChecked(hDlg, IDC_CHECK_NOPROXY),
 					IsDlgButtonChecked(hDlg, IDC_CHECK_SETPROXY),
 					proxy, port,
 					IsDlgButtonChecked(hDlg, IDC_CHECK_USEPASS),
-					user, pass);
+					user, pass, useragent, referrer, cookie);
 			}
 			break;
 		}

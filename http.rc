@@ -1,4 +1,4 @@
-//Microsoft Developer Studio generated resource script.
+// Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
 
@@ -27,18 +27,18 @@ LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
 // TEXTINCLUDE
 //
 
-1 TEXTINCLUDE DISCARDABLE 
+1 TEXTINCLUDE 
 BEGIN
     "resource.h\0"
 END
 
-2 TEXTINCLUDE DISCARDABLE 
+2 TEXTINCLUDE 
 BEGIN
     "#include ""afxres.h""\r\n"
     "\0"
 END
 
-3 TEXTINCLUDE DISCARDABLE 
+3 TEXTINCLUDE 
 BEGIN
     "\r\n"
     "\0"
@@ -54,16 +54,16 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_ICON_HTTP           ICON    DISCARDABLE     "ico00001.ico"
-IDI_ICON_FILE           ICON    DISCARDABLE     "icon1.ico"
+IDI_ICON_HTTP           ICON                    "ico00001.ico"
+IDI_ICON_FILE           ICON                    "icon1.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // Dialog
 //
 
-IDD_DIALOG_FILEPROP DIALOG DISCARDABLE  0, 0, 229, 169
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_DIALOG_FILEPROP DIALOG  0, 0, 229, 169
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "ファイルプロパティ"
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
@@ -83,8 +83,8 @@ BEGIN
     PUSHBUTTON      "キャンセル",IDCANCEL,171,150,50,14
 END
 
-IDD_DIALOG_VIEW DIALOG DISCARDABLE  0, 0, 274, 205
-STYLE WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION | WS_SYSMENU | 
+IDD_DIALOG_VIEW DIALOG  0, 0, 274, 205
+STYLE DS_SETFONT | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION | WS_SYSMENU | 
     WS_THICKFRAME
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
@@ -92,8 +92,8 @@ BEGIN
     PUSHBUTTON      "閉じる(&X)",IDOK,220,185,50,14
 END
 
-IDD_DIALOG_HTTPPROP DIALOG DISCARDABLE  0, 0, 227, 229
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_DIALOG_HTTPPROP DIALOG  0, 0, 227, 229
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "全般"
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
@@ -130,50 +130,61 @@ BEGIN
                     ES_READONLY | NOT WS_BORDER | NOT WS_TABSTOP
 END
 
-IDD_DIALOG_HTTPPROP_OPTION DIALOG DISCARDABLE  0, 0, 227, 225
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_DIALOG_HTTPPROP_OPTION DIALOG  0, 0, 227, 225
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "オプション"
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
-    GROUPBOX        "プロキシ",IDC_STATIC,5,5,215,70
+    GROUPBOX        "Proxy",IDC_STATIC,5,5,215,45
     CONTROL         "プロキシを使用しない(&D)",IDC_CHECK_NOPROXY,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,20,15,185,10
+                    BS_AUTOCHECKBOX | WS_TABSTOP,16,16,85,10
     CONTROL         "設定とは違うプロキシを使う(&E)",IDC_CHECK_SETPROXY,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,20,31,185,10
-    LTEXT           "プロキシサーバ(&S):",IDC_STATIC,20,45,115,10
-    LTEXT           "ポート(&T):",IDC_STATIC,165,45,35,8
-    EDITTEXT        IDC_EDIT_PROXY,20,55,140,12,ES_AUTOHSCROLL
-    EDITTEXT        IDC_EDIT_PROXY_PORT,165,55,40,12,ES_AUTOHSCROLL
-    GROUPBOX        "認証",IDC_STATIC,5,81,215,95
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,109,16,103,10
+    LTEXT           "&Server:",IDC_STATIC,14,34,35,10
+    LTEXT           "&Port:",IDC_STATIC,153,35,28,8
+    EDITTEXT        IDC_EDIT_PROXY,40,33,108,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_PROXY_PORT,171,33,41,12,ES_AUTOHSCROLL
+    GROUPBOX        "認証",IDC_STATIC,7,53,215,59
     CONTROL         "このURLはユーザ認証が必要(&A)",IDC_CHECK_USEPASS,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,20,95,165,10
-    LTEXT           "ユーザ(&U):",IDC_STATIC,20,111,80,8
-    EDITTEXT        IDC_EDIT_USER,20,121,185,12,ES_AUTOHSCROLL
-    LTEXT           "パスワード(&P):",IDC_STATIC,20,141,45,8
-    EDITTEXT        IDC_EDIT_PASS,20,151,185,12,ES_PASSWORD | ES_AUTOHSCROLL
+                    BS_AUTOCHECKBOX | WS_TABSTOP,17,65,165,10
+    LTEXT           "ユーザ(&U)",IDC_STATIC,15,79,57,8
+    EDITTEXT        IDC_EDIT_USER,75,78,138,12,ES_AUTOHSCROLL
+    LTEXT           "パスワード(&P):",IDC_STATIC,14,95,56,8
+    EDITTEXT        IDC_EDIT_PASS,74,95,138,12,ES_PASSWORD | ES_AUTOHSCROLL
+    GROUPBOX        "その他",IDC_STATIC,7,117,213,76
+    LTEXT           "UserA&gent:",IDC_STATIC,14,130,35,8
+    EDITTEXT        IDC_EDIT_USERAGENT,53,127,160,14,ES_AUTOHSCROLL
+    LTEXT           "&Referrer:",IDC_STATIC,15,150,35,8
+    EDITTEXT        IDC_EDIT_REFERRER,53,147,160,14,ES_AUTOHSCROLL
+    LTEXT           "&Cookie:",IDC_STATIC,15,169,35,8
+    EDITTEXT        IDC_EDIT_COOKIE,53,167,160,14,ES_AUTOHSCROLL
 END
 
-IDD_DIALOG_HTTPPROP_CHECK DIALOG DISCARDABLE  0, 0, 223, 225
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_DIALOG_HTTPPROP_CHECK DIALOG 0, 0, 225, 226
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "チェック"
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
-    GROUPBOX        "リクエスト方法",IDC_STATIC,5,5,215,40
+    GROUPBOX        "リクエスト方法",IDC_STATIC,5,5,215,49
     CONTROL         "自動(&A) (現在 HEAD)",IDC_RADIO_REQTYPE_AUTO,"Button",
-                    BS_AUTORADIOBUTTON | WS_GROUP,20,17,180,10
+                    BS_AUTORADIOBUTTON | WS_GROUP,16,16,180,10
     CONTROL         "常に GET リクエストでチェックを行う(&G)",
-                    IDC_RADIO_REQTYPE_GET,"Button",BS_AUTORADIOBUTTON,20,29,
-                    180,10
-    GROUPBOX        "チェック方法",IDC_STATIC,5,51,215,67
+                    IDC_RADIO_REQTYPE_GET,"Button",BS_AUTORADIOBUTTON,16,27,
+                    129,10
+    CONTROL         "常に POST リクエストでチェックを行う(&P)",
+                    IDC_RADIO_REQTYPE_POST,"Button",BS_AUTORADIOBUTTON,16,38,
+                    129,10
+    EDITTEXT        IDC_EDIT_POST,149,34,65,14,ES_AUTOHSCROLL
+    GROUPBOX        "チェック方法",IDC_STATIC,5,57,215,62
     CONTROL         "更新日でチェック(&D)",IDC_CHECK_DATE,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,20,63,80,10
+                    BS_AUTOCHECKBOX | WS_TABSTOP,20,68,80,10
     CONTROL         "サイズでチェック(&S)",IDC_CHECK_SIZE,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,20,76,75,10
+                    BS_AUTOCHECKBOX | WS_TABSTOP,20,81,75,10
     CONTROL         "HTMLタグを除いたサイズでチェック(&H)",
                     IDC_CHECK_NOTAGSIZE,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,30,88,135,10
+                    WS_TABSTOP,30,92,135,10
     CONTROL         "内容の変化でチェック(&F) (MD5)",IDC_CHECK_MD5,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,20,101,120,10
+                    BS_AUTOCHECKBOX | WS_TABSTOP,20,104,120,10
     GROUPBOX        "METAタグ チェック",IDC_STATIC,5,123,215,99
     CONTROL         "METAタグを使ったチェックを行う(&M)",IDC_CHECK_META,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,20,135,185,10
@@ -185,13 +196,13 @@ BEGIN
     EDITTEXT        IDC_EDIT_META_TYPENAME,65,177,145,12,ES_AUTOHSCROLL
     LTEXT           "コンテンツ(&C):",IDC_STATIC,20,197,40,10
     EDITTEXT        IDC_EDIT_META_CONTENT,65,193,145,12,ES_AUTOHSCROLL
-    LTEXT           "※ 省略時:",IDC_STATIC,20,211,40,10
+    LTEXT           "※ 省略時:",IDC_STATIC,20,209,40,10
     LTEXT           "<META NAME=""WWWC"" CONTENT=""data"">",IDC_STATIC,65,
-                    211,145,10
+                    209,145,10
 END
 
-IDD_DIALOG_PROTOCOLPROP_CHECK DIALOG DISCARDABLE  0, 0, 234, 225
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_DIALOG_PROTOCOLPROP_CHECK DIALOG  0, 0, 234, 225
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "チェック"
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
@@ -222,7 +233,7 @@ BEGIN
 END
 
 IDD_DIALOG_URLLIST DIALOGEX 0, 0, 335, 229
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "ブラウザ情報一覧"
 FONT 9, "ＭＳ Ｐゴシック", 0, 0, 0x1
 BEGIN
@@ -241,8 +252,8 @@ BEGIN
     PUSHBUTTON      "キャンセル",IDCANCEL,276,210,50,14
 END
 
-IDD_DIALOG_SETBROWSER DIALOG DISCARDABLE  0, 0, 214, 99
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_DIALOG_SETBROWSER DIALOG  0, 0, 214, 99
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "ブラウザ設定"
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
@@ -256,8 +267,8 @@ BEGIN
     PUSHBUTTON      "DDE設定(&D)",IDC_BUTTON_SETDDE,155,75,50,14
 END
 
-IDD_DIALOG_SETDDEAPP DIALOG DISCARDABLE  0, 0, 234, 225
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_DIALOG_SETDDEAPP DIALOG  0, 0, 234, 225
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "ブラウザの登録"
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
@@ -274,8 +285,8 @@ BEGIN
     PUSHBUTTON      "下へ(&W)",IDC_BUTTON_DOWN,175,197,50,14
 END
 
-IDD_DIALOG_ADDAPPNAME DIALOG DISCARDABLE  0, 0, 187, 65
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_DIALOG_ADDAPPNAME DIALOG  0, 0, 187, 65
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "アプリケーション名の追加"
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
@@ -292,7 +303,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO DISCARDABLE 
+GUIDELINES DESIGNINFO 
 BEGIN
     IDD_DIALOG_FILEPROP, DIALOG
     BEGIN
@@ -329,9 +340,9 @@ BEGIN
     IDD_DIALOG_HTTPPROP_CHECK, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 216
+        RIGHTMARGIN, 218
         TOPMARGIN, 7
-        BOTTOMMARGIN, 218
+        BOTTOMMARGIN, 219
     END
 
     IDD_DIALOG_PROTOCOLPROP_CHECK, DIALOG
@@ -377,7 +388,6 @@ END
 #endif    // APSTUDIO_INVOKED
 
 
-#ifndef _MAC
 /////////////////////////////////////////////////////////////////////////////
 //
 // Version
@@ -400,18 +410,13 @@ BEGIN
     BEGIN
         BLOCK "041104b0"
         BEGIN
-            VALUE "Comments", "\0"
-            VALUE "CompanyName", "\0"
-            VALUE "FileDescription", "WWWC Protocol DLL\0"
-            VALUE "FileVersion", "1, 0, 4, 0\0"
-            VALUE "InternalName", "WWWC\0"
-            VALUE "LegalCopyright", "Copyright (C) 1996-2003 by Nakashima Tomoaki. All rights reserved.\0"
-            VALUE "LegalTrademarks", "\0"
-            VALUE "OriginalFilename", "wwwc.dll\0"
-            VALUE "PrivateBuild", "\0"
-            VALUE "ProductName", "WWWC Protocol DLL\0"
-            VALUE "ProductVersion", "1, 0, 4, 0\0"
-            VALUE "SpecialBuild", "\0"
+            VALUE "FileDescription", "WWWC Protocol DLL"
+            VALUE "FileVersion", "1, 0, 4, 0"
+            VALUE "InternalName", "WWWC"
+            VALUE "LegalCopyright", "Copyright (C) 1996-2003 by Nakashima Tomoaki. All rights reserved."
+            VALUE "OriginalFilename", "wwwc.dll"
+            VALUE "ProductName", "WWWC Protocol DLL"
+            VALUE "ProductVersion", "1, 0, 4, 0"
         END
     END
     BLOCK "VarFileInfo"
@@ -419,8 +424,6 @@ BEGIN
         VALUE "Translation", 0x411, 1200
     END
 END
-
-#endif    // !_MAC
 
 #endif    // 日本語 resources
 /////////////////////////////////////////////////////////////////////////////
