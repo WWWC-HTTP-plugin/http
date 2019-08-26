@@ -30,6 +30,9 @@
 
 #include "resource.h"
 
+#include "def.h"
+#include "auth.h"
+
 
 /**************************************************************************
 	Define
@@ -50,7 +53,8 @@ int TimeOut;
 
 int Proxy;
 char pServer[BUFSIZE];
-int pPort;
+//int pPort;
+char pPort[PORTSIZE];
 int pNoCache;
 int pUsePass;
 char pUser[BUFSIZE];
@@ -68,6 +72,14 @@ int AppCnt;
 
 extern FILTER *FilterInfo;
 
+BOOL InfoToDate = FALSE;
+BOOL InfoToTitle = FALSE;
+BOOL DoubleDecodeAndAmp = FALSE;
+BOOL EachNotify = FALSE;
+BOOL ErrorNotify = FALSE;
+
+struct OAUTHCONFIG *OauthConfig = NULL;
+
 
 /******************************************************************************
 
@@ -83,6 +95,10 @@ __declspec(dllexport) int CALLBACK DllInitialize(void)
 	char CuDir[BUFSIZE];
 	char buf[BUFSIZE];
 	int i;
+	HANDLE FindFile = NULL;
+	WIN32_FIND_DATA FindFileData;
+	struct OAUTHCONFIG *OauthConfigTemp = NULL, *OauthConfigPrev = NULL;
+
 
 	GetModuleFileName(ghinst, CuDir, BUFSIZE - 1);
 	p = CuDir;
@@ -111,10 +127,11 @@ __declspec(dllexport) int CALLBACK DllInitialize(void)
 
 	CheckType = GetPrivateProfileInt("CHECK", "CheckType", 0, app_path);
 	TimeOut = GetPrivateProfileInt("CHECK", "TimeOut", 60, app_path);
+	ErrorNotify = GetPrivateProfileInt("CHECK", "ErrorNotify", 0, app_path);
 
 	Proxy = GetPrivateProfileInt("PROXY", "Proxy", 0, app_path);
 	GetPrivateProfileString("PROXY", "pServer", "", pServer, BUFSIZE - 1, app_path);
-	pPort = GetPrivateProfileInt("PROXY", "pPort", 0, app_path);
+	GetPrivateProfileString("PROXY", "pPort", "", pPort, PORTSIZE, app_path);
 	pNoCache = GetPrivateProfileInt("PROXY", "pNoCache", 1, app_path);
 	pUsePass = GetPrivateProfileInt("PROXY", "pUsePass", 0, app_path);
 	GetPrivateProfileString("PROXY", "pUser", "", pUser, BUFSIZE - 1, app_path);
@@ -144,6 +161,65 @@ __declspec(dllexport) int CALLBACK DllInitialize(void)
 	if(FilterInfo == NULL){
 		ReadFilterFile(CuDir);
 	}
+
+
+	// フィード
+	InfoToDate = GetPrivateProfileInt("FEED", "InfoToDate", 0, app_path);
+	InfoToTitle = GetPrivateProfileInt("FEED", "InfoToTitle", 0, app_path);
+	DoubleDecodeAndAmp = GetPrivateProfileInt("FEED", "DoubleDecodeAndAmp", 0, app_path);
+	EachNotify = GetPrivateProfileInt("FEED", "EachNotify", 0, app_path);
+
+
+	// OAuth 設定ファイル
+	lstrcpy(buf, CuDir);
+	strcat_s(buf, BUFSIZE, "\\oauth_*.ini");
+	FindFile = FindFirstFile(buf, &FindFileData);
+	if ( FindFile != INVALID_HANDLE_VALUE ) {
+		OauthConfigPrev = NULL;
+		do {
+			// フォルダは飛ばす
+			if ( FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) {
+				continue;
+			}
+
+			OauthConfigTemp = M_ALLOC_Z(sizeof(struct OAUTHCONFIG));
+			if ( OauthConfigTemp == NULL ) {
+				break;
+			}
+			// ファイル名からホスト名を得る
+			lstrcpyn(OauthConfigTemp->HostName, FindFileData.cFileName + 6, lstrlen(FindFileData.cFileName) - 9);
+			// パス名
+			if ( p = strchr(OauthConfigTemp->HostName, '_') ) {
+				lstrcpy(OauthConfigTemp->PathName, p + 1);
+				*p = '\0';
+			}
+			// ファイルパス
+			*(buf + lstrlen(CuDir) + 1) = '\0';
+			strcat_s(buf, BUFSIZE, FindFileData.cFileName);
+			// 読み込み
+			OauthConfigTemp->Version = GetPrivateProfileInt("OAUTH", "Version", 1, buf);
+			OauthConfigTemp->ReqMethod = GetPrivateProfileInt("OAUTH", "ReqMethod", 3, buf);
+			OauthConfigTemp->SignMethod = GetPrivateProfileInt("OAUTH", "SignMethod", 0, buf);
+			OauthConfigTemp->Expire = GetPrivateProfileInt("OAUTH", "Expire", 0, buf);
+			GetPrivateProfileString("OAUTH", "Realm", "", OauthConfigTemp->Realm, BUFSIZE, buf);
+			GetPrivateProfileString("OAUTH", "ClientIdentifier", "", OauthConfigTemp->ClientIdentifier, BUFSIZE, buf);
+			GetPrivateProfileString("OAUTH", "ClientSecret", "", OauthConfigTemp->ClientSecret, BUFSIZE, buf);
+			GetPrivateProfileString("OAUTH", "TemporaryUri", "", OauthConfigTemp->TemporaryUri, BUFSIZE, buf);
+			GetPrivateProfileString("OAUTH", "CallbackUri", "oob", OauthConfigTemp->CallbackUri, BUFSIZE, buf);
+			GetPrivateProfileString("OAUTH", "Scope", "", OauthConfigTemp->Scope, BUFSIZE, buf);
+			GetPrivateProfileString("OAUTH", "AuthorizationUri", "", OauthConfigTemp->AuthorizationUri, BUFSIZE, buf);
+			GetPrivateProfileString("OAUTH", "TokenUri", "", OauthConfigTemp->TokenUri, BUFSIZE, buf);
+			// 次、読み込みとは逆順になる
+			OauthConfigTemp->Next = OauthConfigPrev;
+			OauthConfigPrev = OauthConfigTemp;
+		} while ( FindNextFile(FindFile, &FindFileData) );
+
+		OauthConfig = OauthConfigPrev;
+	}
+	FindClose(FindFile);
+	FindFile = NULL;
+
+
 	return 0;
 }
 

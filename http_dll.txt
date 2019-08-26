@@ -1,0 +1,113 @@
+WWWC用改造HTTPプラグイン
+http://www.geocities.co.jp/SiliconValley/6361/http/
+
+
+WWWC1.0.4 付属 wwwc.dll → WWWC.DLL 改造版 → wwwcdll_20051206.zip → up6755.zip
+→ いまここ
+な改造品。
+
+動作環境と安定性は知らない。バックアップを取りながら試用を重ねてね。
+このソフトウェアの使用に関しては、何から何まで無保証です。
+
+
+
+■ セキュリティに関して
+
+この改造版によって追加された、フィードおよびリンク抽出による更新チェックは、
+従来のチェック方法とは異なり、ウェブページ内容に由来する情報を WWWC の「開くURL」
+として設定します。
+自らが直接設定するのではなく、ウェブページの内容が自動的に設定されるということは、
+ウェブページの内容が悪意あるものであった場合、使用しているコンピュータに深刻な
+被害が発生する可能性があります。
+
+危険性の単純な確認方法として、適当なアイテムの「開くURL」に、適当なプログラム
+（例えば C:\Program Files\Windows Media Player\wmplayer.exe）を設定し、その
+アイテムを実行してみてください。設定したプログラムが実行されるはずです。
+同様に、フィードおよびリンク抽出による更新チェックによって、悪意あるコマンドが
+「開くURL」に設定された場合、それを実行してしまうことになります。
+これは、URL の実行を Windows の関連付け実行に委ねているためです。
+ツールプラグインを経由する場合は、そのプラグインにおける実行方法によりますが、
+同様の動作になることもあります。
+
+これは、URL を開くプログラムを明確に指定することで回避できます。
+実行プログラムを指定することで、Windows の関連付け実行がされなくなり、また正常な
+ブラウザであれば、URL を指定されるべき所でコマンドを指定されても、そのコマンドが
+そのまま実行されることはありません。
+
+なお、この実行プログラムとして、同梱の app.js を使用することは対策にはなりません。
+app.js も同様に Windows の関連付け実行をするからです。
+app.js を使用する場合は、app.js を編集し、ソースの最初にある 変数 app で実行する
+プログラムを指定してください。
+
+
+
+■ 著作権とか
+
+WWWC（wwwc.dll を含む）は、nakka (Nakashima Tomoaki) 氏の著作物です。
+
+wwwc.dll（及びこれを改造したhttp.dll）は MD5ダイジェスト値の作成に
+"RSA Data Security, Inc. MD5 Message-Digest Algorithm"
+を使用しています。ライセンスは下記参照。
+
+wwwc.dll のこれまでの改造には、300◆co3azLCFlY氏、677氏、678氏、40氏、svns氏、
+及び49氏が貢献されています。
+
+http.dll は、正規表現の使用に関して、K.Kosako氏の正規表現ライブラリ鬼車を使用し、
+onig.dll を同梱しています。ライセンスは下記参照。
+
+鬼車の使用に関して、http://www.void.in/wiki/OnigPP を参考にしました。
+
+
+
+/* Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
+rights reserved.
+
+License to copy and use this software is granted provided that it
+is identified as the "RSA Data Security, Inc. MD5 Message-Digest
+Algorithm" in all material mentioning or referencing this software
+or this function.
+
+License is also granted to make and use derivative works provided
+that such works are identified as "derived from the RSA Data
+Security, Inc. MD5 Message-Digest Algorithm" in all material
+mentioning or referencing the derived work.
+
+RSA Data Security, Inc. makes no representations concerning either
+the merchantability of this software or the suitability of this
+software for any particular purpose. It is provided "as is"
+without express or implied warranty of any kind.
+
+These notices must be retained in any copies of any part of this
+documentation and/or software.
+ */
+
+
+
+Oniguruma LICENSE
+-----------------
+
+/*-
+ * Copyright (c) 2002-2007  K.Kosako  <sndgk393 AT ybb DOT ne DOT jp>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */

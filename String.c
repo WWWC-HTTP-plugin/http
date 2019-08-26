@@ -339,19 +339,24 @@ int LresultCmp(char *Oldbuf, char *Newbuf)
 
 ******************************************************************************/
 
-int GetURL(char *URL, char *server, char *path, int DefPort, char *user, char *pass)
+int GetURL(char *URL, char *server, char *path, BOOL *SecureFlag)
 {
 	char *p, *r, *t, wk[10];		/* 作業用領域 */
-	char us[BUFSIZE], ps[BUFSIZE];
 	int port;
-
-	port = DefPort;
 
 	/* スキーム名を取得する */
 	if(lstrcmpni(URL, "http://", 7) == 0){
 		p = URL + 7;
+		port = 80;
+		if ( SecureFlag != NULL ) {
+			*SecureFlag = FALSE;
+		}
 	}else if(lstrcmpni(URL, "https://", 8) == 0){
 		p = URL + 8;
+		port = 443;
+		if ( SecureFlag != NULL ) {
+			*SecureFlag = TRUE;
+		}
 	}else{
 		return -1;
 	}
@@ -368,33 +373,6 @@ int GetURL(char *URL, char *server, char *path, int DefPort, char *user, char *p
 			*r = *p;
 		}
 		*r = '\0';
-	}
-
-	for(p = server; *p != '@' && *p != '\0'; p++);
-	if(*p == '@'){
-		r = us;
-		for(p = server; *p != ':' && *p != '@' && *p != '\0'; p++){
-			*(r++) = *p;
-		}
-		*r = '\0';
-		if(*p == ':'){
-			p++;
-			r = ps;
-			for(; *p != '@' && *p != '\0'; p++){
-				*(r++) = *p;
-			}
-			*r = '\0';
-		}
-		if(user != NULL){
-			lstrcpy(user, us);
-		}
-		if(pass != NULL){
-			lstrcpy(pass, ps);
-		}
-		if(*p == '@'){
-			p++;
-		}
-		lstrcpy(server, p);
 	}
 
 	/* サーバ名:ポート となっている場合は分割する */
@@ -525,35 +503,28 @@ BOOL GetOptionString(char *buf, char *ret, int num)
 	オプションの数値を取得する
 
 ******************************************************************************/
-
-int GetOptionInt(char *buf, int num)
-{
-	char ret[BUFSIZE];
-	char *p, *r;
+// BUFSIZEに制限されてしまうのでポインタ操作だけでやってみる
+int GetOptionInt(char *buf, int num) {
+	char *p, *q;
 	int i = 0;
 
-	*ret = '\0';
 	if(buf == NULL){
 		return 0;
 	}
-	r = ret;
-	for(p = buf; *p != '\0'; p++){
+
+	for ( q = p = buf; *p != '\0'; p++ ) {
 		if(*p == ';' && *(p + 1) == ';'){
-			*r = '\0';
 
 			if(i == num){
-				return atoi(ret);
+				return atoi(q);
 			}
 			i++;
 			p++;
-			*ret = '\0';
-			r = ret;
-		}else{
-			*(r++) = *p;
+			q = p + 1;
 		}
 	}
-	*r = '\0';
-	return ((i == num) ? atoi(ret) : 0);
+
+	return (i == num) ? atoi(q) : 0;
 }
 
 
@@ -1108,6 +1079,8 @@ int DelTagSize(char *buf)
 void ConvHTMLChar(char *buf)
 {
 	char *r, *t, *s;
+	wchar_t UnicodeNum;
+	char Sjis[2] = {'\0', '\0'};
 
 	r = t = buf;
 
@@ -1150,14 +1123,42 @@ void ConvHTMLChar(char *buf)
 				r += lstrlen("copy;");
 				*(t++) = 'c';
 			}else if(*r == '#'){
-				for(s = r + 1; *s >= '0' && *s <= '9'; s++);
-				if(*s != ';'){
-					r--;
-					*(t++) = *(r++);
-				}else{
-					*(t++) = atoi(r + 1);
-					r = s + 1;
+				if ( *(r + 1) == 'x' ) {
+					// 16進
+					UnicodeNum = (wchar_t)strtol(r + 2, &s, 16);
+					if ( *s != ';' ) {
+						*(t++) = *(r - 1);
+						break;
+					}
+				} else {
+					for(s = r + 1; *s >= '0' && *s <= '9'; s++);
+					if(*s != ';'){
+						*(t++) = *(r - 1);
+						break;
+					}else{
+						UnicodeNum = atoi(r + 1);
+					}
 				}
+				// Unicode番号をShift_JIS化
+				if ( UnicodeNum <= 0x20 || UnicodeNum == 0x7f ) {
+					if ( *(t - 1) != ' ' && t != buf) {
+						*(t++) = ' ';
+					}
+				} else if ( UnicodeNum < 0x7f ) {
+					*(t++) = (char)UnicodeNum;
+				} else if ( UnicodeNum == 0x301C ) { // ～
+					*(t++) = '\x81';
+					*(t++) = '\x60';
+				} else {
+					WideCharToMultiByte(CP_ACP, 0, &UnicodeNum, 1, Sjis, 2, NULL, NULL);
+					*t++ = *Sjis;
+					*Sjis = '\0';
+					if ( *(Sjis + 1) != '\0' ) {
+						*t++ = *(Sjis + 1);
+						*(Sjis + 1) = '\0';
+					}
+				}
+				r = s + 1;
 			}else{
 				r--;
 				*(t++) = *(r++);
@@ -1711,20 +1712,6 @@ static BOOL KanjiTypeUTF8(const char *str)
 	unsigned char c;
 	int count = 0;
 	BOOL bit8 = FALSE;
-	/*
-	char *xmldec, *p, *q;
-
-	//XML宣言によるUTF-8判定
-	if( (p = strstr(str,"<?xml ")) != NULL && (q = strstr(p,"?>")) != NULL ){
-		xmldec = GlobalAlloc(GMEM_FIXED, lstrlen(p)-lstrlen(q)+3);
-		strncpy(xmldec, p, lstrlen(p)-lstrlen(q)+2);
-		if( StrMatch("* encoding=\"utf-8\"*", xmldec) ){
-			GlobalFree(xmldec);
-			return TRUE;
-		}
-		GlobalFree(xmldec);
-	}
-	*/
 
 	while ((c = *str) != '\0') {
 		if (count == 0) {
@@ -1732,8 +1719,6 @@ static BOOL KanjiTypeUTF8(const char *str)
 				if ((c & 0xe0) == 0xc0) count = 1;
 				else if ((c & 0xf0) == 0xe0) count = 2;
 				else if ((c & 0xf8) == 0xf0) count = 3;
-				// else if ((c & 0xfc) == 0xf8) count = 4;
-				// else if ((c & 0xfe) == 0xfc) count = 5;
 				else return FALSE;
 				bit8 = TRUE;
 			}
@@ -1756,14 +1741,26 @@ static BOOL KanjiTypeUTF8(const char *str)
 
 ******************************************************************************/
 
-static char *UTF8_SJIS(const char *buf, char *ret)
+static char *UTF8_SJIS(char *buf, char *ret)
 {
 	int len;
 	wchar_t *wp;
+	char *p;
 
 	*ret = '\0';
 	if (buf[0] == (char)0xef && buf[1] == (char)0xbb && buf[2] == (char)0xbf)
 		buf += 3;
+
+	// ～
+	p = buf;
+	while ( *p != '\0' ) {
+		if ( *p == '\xe3' && *(p + 1) == '\x80' && *(p + 2) == '\x9C' ) {
+			*p = '\xef';
+			*(p + 1) = '\xbd';
+			*(p + 2) = '\x9e';
+		}
+		p++;
+	}
 
 	if ((len = MultiByteToWideChar(CP_UTF8, 0, buf, -1, NULL, 0)) == 0)
 		return NULL;
@@ -1775,6 +1772,44 @@ static char *UTF8_SJIS(const char *buf, char *ret)
 	}
 	len = WideCharToMultiByte(CP_ACP, 0, wp, -1, ret, GlobalSize(ret), NULL, NULL);
 	GlobalFree(wp);
+	return (len != 0) ? ret + len - 1 : NULL;
+}
+
+
+/******************************************************************************
+
+	KanjiTypeUTF16LE
+
+	漢字コードがUTF-16LEか
+
+******************************************************************************/
+
+static BOOL KanjiTypeUTF16LE(const char *str)
+{
+	if ( *str == (char)0xff && *(str + 1) == (char)0xfe ) {
+		return TRUE;
+	}
+	return FALSE;
+}
+
+
+/******************************************************************************
+
+	UTF16LE_SJIS
+
+	UTF-16LEをSJISに変換する
+
+******************************************************************************/
+
+static char *UTF16LE_SJIS(const char *buf, char *ret)
+{
+	int len;
+
+	*ret = '\0';
+	if (buf[0] == '\xff' && buf[1] == '\xfe')
+		buf += 2;
+
+	len = WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)buf, -1, ret, GlobalSize(ret), NULL, NULL);
 	return (len != 0) ? ret + len - 1 : NULL;
 }
 
@@ -1795,6 +1830,9 @@ char *ConvStrCode(char *buf, char *ret)
 
 	if (KanjiTypeUTF8(buf))
 		return UTF8_SJIS(buf, ret);
+
+	if (KanjiTypeUTF16LE(buf))
+		return UTF16LE_SJIS(buf, ret);
 
 	p = buf;
 	while(*p != '\0'){
@@ -1863,17 +1901,23 @@ char *SrcConv(char *buf, long Size)
 
 ******************************************************************************/
 
-long DeleteSizeInfo(char *buf, long size)
+//long DeleteSizeInfo(char *Headers, char *Body, long size)
+long _DeleteSizeInfo(int HttpVersion, int ContentLength, char *Body, long size)
 {
 	char *p, *r;
 	long len, i;
 
-	if(lstrcmpni(buf, "HTTP/1.1", 8) != 0 ||
-		GetHeadContentSize(buf, "Content-Length:") > 0){
+
+	return size;
+
+
+//	if(lstrcmpni(Headers, "HTTP/1.1", 8) != 0 ||
+//		GetHeadContentSize(Headers, "Content-Length:") > 0){
+	if( HttpVersion == 0 || ContentLength != -1 ){
 		return size;
 	}
 
-	p = buf + HeaderSize(buf);
+	p = Body;
 	r = p;
 
 	while(*p != '\0'){
@@ -1896,8 +1940,8 @@ long DeleteSizeInfo(char *buf, long size)
 		}
 		*r = '\0';
 	}
-	if(r != (buf + HeaderSize(buf))){
-		return (r - buf);
+	if(r != Body){
+		return (r - Body);
 	}
 	return size;
 }
@@ -2195,4 +2239,5 @@ void Html2Rtf(char *buf, char *ret)
 	*(r++) = '}';
 	*r = '\0';
 }
+
 /* End of source */

@@ -1,11 +1,5 @@
-LIBRARY WWWC
-
-DESCRIPTION 'WWWC DLL'
-
-EXETYPE WINDOWS
-
 EXPORTS
-	DllInitialize
+	DllInitialize	PRIVATE
 
 	GetProtocolList
 	GetToolList
@@ -20,9 +14,7 @@ EXPORTS
 	HTTP_InitItem
 	HTTP_Initialize
 	HTTP_Cancel
-	HTTP_Timer
 	HTTP_Start
-	HTTP_Gethost
 	HTTP_Select
 	HTTP_ItemCheckEnd
 	HTTP_GetItemText

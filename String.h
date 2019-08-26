@@ -27,7 +27,7 @@ int lstrcmpni(char *buf1, char *buf2, int len);
 char *iStrCpy(char *ret, char *buf);
 BOOL StrMatch(const char *Ptn, const char *Str);
 int LresultCmp(char *Oldbuf, char *Newbuf);
-int GetURL(char *URL, char *server, char *path, int DefPort, char *user, char *pass);
+int GetURL(char *URL, char *server, char *path, BOOL *SecureFlag);
 char *CreateMoveURL(char *FromURL, char *ToURL);
 BOOL GetOptionString(char *buf, char *ret, int num);
 int GetOptionInt(char *buf, int num);
@@ -50,7 +50,7 @@ char *EUC_SJIS(char *buf, char *ret);
 int GetKanjiType(unsigned char *str);
 char *ConvStrCode(char *buf, char *ret);
 char *SrcConv(char *buf, long Size);
-long DeleteSizeInfo(char *buf, long size);
+long _DeleteSizeInfo(int HttpVersion, int ContentLength, char *Body, long size);
 int GetHtml2RtfSize(char *buf);
 void Html2Rtf(char *buf, char *ret);
 

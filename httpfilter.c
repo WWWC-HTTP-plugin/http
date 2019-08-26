@@ -26,6 +26,8 @@
 #include "wwwcdll.h"
 #include "resource.h"
 
+#include "def.h"
+
 
 /**************************************************************************
 	Define
@@ -54,7 +56,7 @@ extern HINSTANCE ghinst;
 static char *FindStr(char *buf, char *Str, int len, BOOL first, BOOL icase);
 static char *ConvStr(char *buf);
 static BOOL FindFIlterString(char *buf, char *sStr, char **ts, char **te, BOOL icase);
-static BOOL StrFilter(char *buf, char *sStr, char *eStr, int f, BOOL icase);
+static BOOL StrFilter(char *buf, char *sStr, char *eStr, int f, BOOL icase, char *buf2);
 static char *AllocItemStr(char *buf, char **ret);
 
 
@@ -231,7 +233,7 @@ static BOOL FindFIlterString(char *buf, char *sStr, char **ts, char **te, BOOL i
 
 ******************************************************************************/
 
-static BOOL StrFilter(char *buf, char *sStr, char *eStr, int f, BOOL icase)
+static BOOL StrFilter(char *buf, char *sStr, char *eStr, int f, BOOL icase, OUT char *buf2)
 {
 	char *s1 = NULL, *e1 = NULL;
 	char *s2 = NULL, *e2 = NULL;
@@ -254,7 +256,12 @@ static BOOL StrFilter(char *buf, char *sStr, char *eStr, int f, BOOL icase)
 		lstrcpy(s1, e1);
 	}else{
 		//文字列の抽出
-		lstrcpyn(buf, s1, e1 - s1 + 1);
+		if ( buf2 == NULL) {
+			lstrcpyn(buf, s1, e1 - s1 + 1);
+		} else {
+			lstrcpyn(buf2, s1, e1 - s1 + 1);
+			return e1 - buf;
+		}
 	}
 	return TRUE;
 }
@@ -300,6 +307,10 @@ BOOL FilterCheck(char *url, char *buf, int Size)
 	BOOL rc = TRUE;
 	int i;
 
+	char *tmp2 = NULL;
+	int j, Offset;
+
+
 	if(FilterInfo == NULL) return FALSE;
 
 	for(i = 0; i < FilterCount; i++){
@@ -316,8 +327,26 @@ BOOL FilterCheck(char *url, char *buf, int Size)
 				CRLFConv(tmp);
 			}
 			//フィルタの適用
+
+// test>
+			if ( (FilterInfo + i)->flag == 2 ) {
+				if ( tmp2 == NULL ) {
+					tmp2 = S_ALLOC_Z(strlen(tmp));
+					if ( tmp2 == NULL ) break;
+				}
+
+				Offset = 0;
+				do {
+					Offset += j = StrFilter(tmp + Offset, (FilterInfo + i)->string1, (FilterInfo + i)->string2, 
+						(FilterInfo + i)->flag, (FilterInfo + i)->IgnoreCase, tmp2 + strlen(tmp2));
+					if ( j == FALSE ) break;
+				} while ( (FilterInfo + i)->Repeat );
+
+			} else
+// <test
+
 			if(StrFilter(tmp, (FilterInfo + i)->string1, (FilterInfo + i)->string2, 
-				(FilterInfo + i)->flag, (FilterInfo + i)->IgnoreCase) == FALSE){
+				(FilterInfo + i)->flag, (FilterInfo + i)->IgnoreCase, NULL) == FALSE){
 				//抽出エラーは空にする設定
 				if((FilterInfo + i)->flag == 1 && (FilterInfo + i)->ErrorEmptyBody == TRUE){
 					*tmp = '\0';
@@ -329,13 +358,15 @@ BOOL FilterCheck(char *url, char *buf, int Size)
 			}else if((FilterInfo + i)->flag == 0 && (FilterInfo + i)->Repeat == TRUE){
 				//繰り返してフィルタの適用
 				while(StrFilter(tmp, (FilterInfo + i)->string1, (FilterInfo + i)->string2, 
-					(FilterInfo + i)->flag, (FilterInfo + i)->IgnoreCase) == TRUE);
+					(FilterInfo + i)->flag, (FilterInfo + i)->IgnoreCase, NULL) == TRUE);
 			}
 		}
 	}
+
 	if(tmp != NULL){
-		lstrcpy(buf, tmp);
+		lstrcpy(buf, tmp2 == NULL ? tmp : tmp2);
 		GlobalFree(tmp);
+		M_FREE(tmp2);
 		return rc;
 	}
 	return FALSE;
@@ -495,6 +526,14 @@ BOOL ReadFilterFile(char *cpath)
 				case 'r':
 					(FilterInfo + i)->Repeat = TRUE;
 					break;
+
+// test>
+				case 'O' :
+				case 'o' :
+					(FilterInfo + i)->flag = 2;
+					break;
+// <test
+
 				}
 			}
 		}

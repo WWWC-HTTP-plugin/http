@@ -29,8 +29,8 @@
 #define ID_MENUITEM_COPY				40056
 #define ID_MENUITEM_ALLSELECT			40057
 
-//#define BUFSIZE							256
-#define BUFSIZE							2048
+#define BUFSIZE							256
+#define BIGSIZE							2048
 #define MAXSIZE							32768
 #define RECVSIZE						32768				/* 受信サイズ */
 
@@ -55,6 +55,11 @@
 #define OP2_USERAGENT					7
 #define OP2_REFERRER					8
 #define OP2_COOKIE						9
+#define OP2_COOKIEFLAG					10
+#define OP2_IGNORECERTERROR				11
+#define OP2_EXEC						12
+#define OP2_COMMAND						13
+
 
 #define LVM_FIRST						0x1000      // ListView messages
 #define LVM_SETEXTENDEDLISTVIEWSTYLE	(LVM_FIRST + 54)
@@ -63,13 +68,20 @@
 #define LVS_EX_FULLROWSELECT			0x00000020 // applies to report mode only
 #define LVS_EX_ONECLICKACTIVATE			0x00000040
 
+#define PORTSIZE						6
+
+#define REQUEST_HEAD		0
+#define REQUEST_GET			1
+#define REQUEST_POST		3
+
+#define USER_AGENT			_T("WWWC/1.04")
+
 
 /**************************************************************************
 	Struct
 **************************************************************************/
 
 struct TPHTTP{
-	char gHostEnt[MAXGETHOSTSTRUCT];	/* ホスト情報を取得するバッファ */
 	char *SvName;						/* サーバ名 */
 	char *Path;							/* パス */
 	int Port;							/* ポート番号 */
@@ -77,14 +89,15 @@ struct TPHTTP{
 	char *hSvName;						/* HOSTサーバ名 */
 	int hPort;							/* HOSTポート番号 */
 
-	char *buf;
 	long Size;
-	BOOL HeadCheckFlag;
 	BOOL FilterFlag;
 	int Status;
 
-	char *user;
-	char *pass;
+	BOOL SecureFlag;
+	int ProxyFlag;
+	LPBYTE Body;
+	int ContentLength;
+	int StatusCode;
 };
 
 struct TPGETHOSTBYNAME{
@@ -102,6 +115,16 @@ struct TPHOSTINFO {
 };
 
 
+struct THARGS {
+	HWND hWnd;
+	struct TPITEM *tpItemInfo;
+	HANDLE hThread;
+	HANDLE hInet;
+	HANDLE hHttpCon;
+	HANDLE hHttpReq;
+};
+
+
 /**************************************************************************
 	Function Prototypes
 **************************************************************************/
@@ -109,6 +132,18 @@ struct TPHOSTINFO {
 void ErrMsg(HWND hWnd, int ErrCode, char *Title);
 int ExecItem(HWND hWnd, char *buf, char* cmdline);
 int FileSelect(HWND hDlg,char *oFile,char *oFilter,char *oTitle,char *ret,char *def,int Index);
+void SetErrorString(struct TPITEM *tpItemInfo, char *buf, BOOL HeadFlag);
+
+DWORD WINAPI WinetStart(struct THARGS *);
+int WinetReq(struct THARGS *, struct TPITEM *, struct TPHTTP *);
+int WinetCheckEnd(HWND, struct TPITEM *, int);
+void WinetClear(struct TPITEM *tpItemInfo);
+static int WinetGetErrMsg(OUT LPTSTR, IN int);
+BOOL GetLastModified(struct TPITEM *tpItemInfo, OUT LPTSTR *LastModified);
+BOOL ExecOptionCommand(struct TPITEM* tpItemInfo, LPTSTR Url);
+
+__declspec(dllexport) int CALLBACK HTTP_Start(HWND hWnd, struct TPITEM *tpItemInfo);
+BOOL GetServerPort(HWND hWnd, struct TPITEM *tpItemInfo, struct TPHTTP *tpHTTP);
 
 #endif
 /* End of source */
